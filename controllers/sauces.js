@@ -19,14 +19,25 @@ exports.createSauce = (req, res, next) => {
 };
 
 exports.modifySauce = (req, res, next) => {
+    console.log(req.file);
+    if(req.file) {
+        Sauce.findOne({ _id: req.params.id })
+        .then(sauce => {
+            const filename = sauce.imageUrl.split('/images/')[1];
+            fs.unlink(`images/${filename}`, () => { });
+        })
+        .catch(error => res.status(500).json({ error }));
+    }
     const sauceObject = req.file ?
-        {
-            ...JSON.parse(req.body.sauce),
-            imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
-        } : { ...req.body };
+    {
+        ...JSON.parse(req.body.sauce),
+        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
+    } : { ...req.body };
     Sauce.updateOne({ _id: req.params.id }, { ...sauceObject, _id: req.params.id })
-        .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-        .catch(error => res.status(400).json({ error }));
+    .then(() => res.status(200).json({ message: 'Objet modifié !' }))
+    .catch(error => res.status(400).json({ error }));
+    
+    
 };
 
 exports.deleteSauce = (req, res, next) => {
@@ -66,57 +77,54 @@ exports.likeSauce = (req, res, next) => {
             let alreadyDisliked = 0;
             let userLike = req.body.like;
             let user_id = req.body.userId;
-
-            if(sauce.usersLiked) {
+            console.log(sauce.usersLiked)
+            if (sauce.usersLiked) {
                 tabLikes = JSON.parse(sauce.usersLiked);
-                while(i < tabLikes.length) {
-                    if(tabLikes[i] == user_id) { 
-                        if(userLike == 0 || userLike == -1) 
-                        { 
-                            tabLikes.splice(i, 1); 
-                            sauce.likes --;
+                // console.log(tabLikes)
+                while (i < tabLikes.length) {
+                    if (tabLikes[i] == user_id) {
+                        if (userLike == 0 || userLike == -1) {
+                            tabLikes.splice(i, 1);
+                            sauce.likes--;
                         }
                         alreadyLiked = 1;
                     }
-                    i ++;
+                    i++;
                 }
             }
-            if(sauce.usersDisliked) {
+            if (sauce.usersDisliked) {
                 tabDislikes = JSON.parse(sauce.usersDisliked); i = 0;
-                while(i < tabDislikes.length) {
-                    if(tabDislikes[i] == user_id) { 
-                        if(userLike == 0 || userLike == 1) 
-                        { 
-                            tabDislikes.splice(i, 1); 
-                            sauce.dislikes --;
+                while (i < tabDislikes.length) {
+                    if (tabDislikes[i] == user_id) {
+                        if (userLike == 0 || userLike == 1) {
+                            tabDislikes.splice(i, 1);
+                            sauce.dislikes--;
                         }
                         alreadyDisliked = 1;
                     }
-                    i ++;
+                    i++;
                 }
             }
 
-            if(userLike == 1 && alreadyLiked == 0) 
-            {
+            if (userLike == 1 && alreadyLiked == 0) {
                 tabLikes.push(user_id);
-                sauce.likes ++; 
+                sauce.likes++;
             }
-            if(userLike == -1 && alreadyDisliked == 0) 
-            {
+            if (userLike == -1 && alreadyDisliked == 0) {
                 tabDislikes.push(user_id);
-                sauce.dislikes ++; 
+                sauce.dislikes++;
             }
 
-            Sauce.updateOne({ _id: req.params.id }, 
-                { 
-                    likes: sauce.likes, 
-                    dislikes: sauce.dislikes, 
-                    usersLiked: JSON.stringify(tabLikes), 
+            Sauce.updateOne({ _id: req.params.id },
+                {
+                    likes: sauce.likes,
+                    dislikes: sauce.dislikes,
+                    usersLiked: JSON.stringify(tabLikes),
                     usersDisliked: JSON.stringify(tabDislikes)
                 })
-                .then(() => res.status(200).json({ message: 'Updated ! '}))
+                .then(() => res.status(200).json({ message: 'Updated ! ' }))
                 .catch(error => res.status(400).json({ error }));
 
         })
         .catch(error => res.status(500).json({ error }));
-}; 
+};
