@@ -1,3 +1,5 @@
+'use strict';
+
 const Sauce = require('../models/Sauce');
 const fs = require('fs');
 
@@ -70,61 +72,39 @@ exports.getAllSauces = (req, res, next) => {
 exports.likeSauce = (req, res, next) => {
     Sauce.findOne({ _id: req.params.id })
         .then(sauce => {
-            let i = 0;
-            let tabLikes = [];
-            let tabDislikes = [];
-            let alreadyLiked = 0;
-            let alreadyDisliked = 0;
-            let userLike = req.body.like;
-            let user_id = req.body.userId;
-            console.log(sauce.usersLiked)
-            if (sauce.usersLiked) {
-                tabLikes = JSON.parse(sauce.usersLiked);
-                // console.log(tabLikes)
-                while (i < tabLikes.length) {
-                    if (tabLikes[i] == user_id) {
-                        if (userLike == 0 || userLike == -1) {
-                            tabLikes.splice(i, 1);
-                            sauce.likes--;
-                        }
-                        alreadyLiked = 1;
-                    }
-                    i++;
-                }
-            }
-            if (sauce.usersDisliked) {
-                tabDislikes = JSON.parse(sauce.usersDisliked); i = 0;
-                while (i < tabDislikes.length) {
-                    if (tabDislikes[i] == user_id) {
-                        if (userLike == 0 || userLike == 1) {
-                            tabDislikes.splice(i, 1);
-                            sauce.dislikes--;
-                        }
-                        alreadyDisliked = 1;
-                    }
-                    i++;
+
+            if (req.body.like == 1) {
+                if (!sauce.usersLiked.includes(req.body.userId)) {
+                    sauce.likes = sauce.likes + 1;
+                    sauce.usersLiked.push(req.body.userId);
                 }
             }
 
-            if (userLike == 1 && alreadyLiked == 0) {
-                tabLikes.push(user_id);
-                sauce.likes++;
+            if (req.body.like == -1) {
+                if (!sauce.usersDisliked.includes(req.body.userId)) {
+                    sauce.dislikes = sauce.dislikes + 1;
+                    sauce.usersDisliked.push(req.body.userId);
+                }
             }
-            if (userLike == -1 && alreadyDisliked == 0) {
-                tabDislikes.push(user_id);
-                sauce.dislikes++;
+            
+            if (req.body.like == 0) {
+                if (sauce.usersLiked.includes(req.body.userId)) {
+                    sauce.likes = sauce.likes - 1;
+                    let index = sauce.usersLiked.indexOf(req.body.userId);
+                    sauce.usersLiked.splice(index, 1);
+                }
+                if (sauce.usersDisliked.includes(req.body.userId)) {
+                    sauce.dislikes = sauce.dislikes - 1;
+                    let index = sauce.usersDisliked.indexOf(req.body.userId);
+                    sauce.usersDisliked.splice(index, 1);
+                }
             }
 
-            Sauce.updateOne({ _id: req.params.id },
-                {
-                    likes: sauce.likes,
-                    dislikes: sauce.dislikes,
-                    usersLiked: JSON.stringify(tabLikes),
-                    usersDisliked: JSON.stringify(tabDislikes)
-                })
-                .then(() => res.status(200).json({ message: 'Updated ! ' }))
-                .catch(error => res.status(400).json({ error }));
+            sauce.save()
+
+            res.status(200).json({ message: 'Updated ! ' })
 
         })
+    
         .catch(error => res.status(500).json({ error }));
 };
